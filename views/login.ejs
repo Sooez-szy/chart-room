@@ -1,0 +1,89 @@
+
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="shortcut icon" href="images/favicon.ico">
+
+    <title>Signin Template for Bootstrap打撒大说的D</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/animate.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <!-- Custom styles for this template -->
+    <script type="text/javascript" src="js/jquery.js"></script>
+    <script type="text/javascript" src="js/bootstrap.min.js"></script>
+</head>
+<body class="gray-bg">
+    <div class="middle-box text-center loginscreen animated fadeInDown">
+        <div>
+            <div>
+                <h1 class="logo-name">MC</h1>
+            </div>
+            <h3>登录</h3>
+          
+            <h2 class="form-signin-heading" id="message">Please sign in</h2>
+           
+           <form id="loginForm" class="m-t" role="form" method="post" onsubmit="return loginUp()">
+                <div class="form-group">
+                   <input type="text" class="form-control" placeholder="输入用户名" required autofocus name="username" id="usename" onblur="checkuser()">
+                </div>
+                <div class="form-group">
+                    <input type="password" class="form-control" placeholder="输入密码" required   name="password">
+                </div>
+                <button type="submit" class="btn btn-primary block full-width m-b">登录</button>
+
+                <label class="checkbox">
+                <input type="checkbox" value="remember-me"> Remember me
+            </label>
+            </form>
+            <p class="m-t"> <small>我们的应用程序主要基于Bootstrap 3 &copy; 2014</small> </p>
+        </div>
+    </div>
+    <script>
+        $.fn.serializeObject = function()
+        {
+            var o = {};
+            var a = this.serializeArray();
+            $.each(a, function() {
+                if (o[this.name] !== undefined) {
+                    if (!o[this.name].push) {
+                        o[this.name] = [o[this.name]];
+                    }
+                    o[this.name].push(this.value || '');
+                } else {
+                    o[this.name] = this.value || '';
+                }
+            });
+            return o;
+        };
+        function loginUp(){
+            var formData = $("#loginForm").serializeObject();
+            var Data = {username: formData.username, password: formData.password};
+            $.ajax({
+                type:'get',
+                url:'/loginUp',
+                data:Data,
+                success:function(data){
+                    if(data=='success'){
+                        window.location.href = "/";
+                    }else if(data=='fail'){
+                        alert('失败');
+                    }
+                }
+            })
+            return false;
+        }
+
+
+    </script>
+    
+    
+</body>
+
+</html>

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>聊天</title>
+
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/font-awesome/css/font-awesome.css" rel="stylesheet">
+    <link href="css/plugins/toastr/toastr.min.css" rel="stylesheet">
+    <link href="css/animate.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <script src="js/dateFormat.js"></script>
+    <style>
+        .chat-user:hover{background:#f3f3f4;transition:all .3s ease;cursor: pointer}
+        .chat-user-clicked{background:#eee;}
+        #rightMenu{border:1px solid #eee;}
+        #rightMenu button{border:none;border-bottom:1px solid #eee}
+        #rightMenu button:hover{background: #f6f6f6}
+        #rightMenu button:last-child{border:none;}
+    </style>
+</head>
+
+<body>
+
+<div id="wrapper">
+
+    <% include publicModule/leftNav.ejs %>
+
+    <div id="page-wrapper" class="gray-bg">
+        <div class="row border-bottom">
+            <% include publicModule/topNav.ejs %>
+        </div>
+        <div class="wrapper wrapper-content animated fadeInRight">
+            <div class="row">
+                <div class="col-lg-12">
+
+                    <div class="ibox chat-view">
+
+                        <div class="ibox-title">
+                            <small class="pull-right text-muted">最后一条消息:  2015-1-26 - 18:39:23 - 周六</small>
+                            聊天室面板
+                        </div>
+                        <div class="ibox-content">
+                            <div class="row" style="height:550px">
+                                <div class="col-md-9 " style="height: 100%;">
+                                    <div id="chat-discussion" class="chat-discussion" style="height: 100%;">
+                                        <!--聊天记录循环列表-->
+                                        <%if(chatContents){%>
+                                            <%chatContents.forEach(function(chatContent){%>
+                                                <%if(chatContent.nickname == user.nickname){%>
+                                                <div class="chat-message right clearfix">
+                                                    <img class="message-avatar" src="<%=chatContent.header_pic%>" alt="">
+                                                    <div class="message" style="display: inline-block;margin-right:0px;float:right;max-width:60%">
+                                                        <a class="message-author" href="#" style="margin-left:10px"><%=chatContent.nickname%></a>
+                                                        <span class="message-date text-left"><%=chatContent.create_time%></span>
+                                                        <span class="message-content" style="padding-top:5px;"><%=chatContent.content%></span>
+                                                    </div>
+                                                </div>
+                                                <%}else{%>
+                                                <div class="chat-message left clearfix">
+                                                    <img class="message-avatar" src="<%=chatContent.header_pic%>" alt="">
+                                                    <div class="message" style="display: inline-block;margin-left:0px;float:left;max-width:60%">
+                                                        <a class="message-author" href="#" style="margin-right:10px"><%=chatContent.nickname%></a>
+                                                        <span class="message-date text-right"><%=chatContent.create_time%></span>
+                                                        <span class="message-content" style="padding-top:5px;"><%=chatContent.content%></span>
+                                                    </div>
+                                                 </div>
+                                                <%}%>
+                                            <%})%>
+                                        <%}%>
+                                    </div>
+                                </div>
+                                <div class="col-md-3" style="height: 100%;">
+                                    <div class="chat-users" style="height: 100%;">
+                                        <div id="users-list" class="users-list" oncontextmenu="doNothing(event)">
+                                              <!--
+                                                    在线用户列表
+                                              -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-lg-12">
+                                    <div class="chat-message-form">
+                                        <div class="form-group">
+                                            <textarea id="mesArea" class="form-control message-input" name="message" placeholder="输入消息文本"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button id="sendMsgBtn" class="btn btn-sm btn-primary pull-left">发送</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <% include publicModule/footer.ejs %>
+
+    </div>
+    <% include publicModule/smallChat.ejs %>
+</div>
+<div id="rightMenu" style="width:100px ;position: absolute;display: none">
+    <button class="btn btn-default btn-sm" style="width: 100%;">个人信息</button>
+    <button id="ownChat" class="btn btn-default btn-sm" style="width: 100%;">私聊</button>
+</div>
+<input id="userVal" type="hidden" value="<%=JSON.stringify(user)%>">
+
+
+
+<!-- Mainly scripts -->
+<script src="js/jquery-2.1.1.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/plugins/metisMenu/jquery.metisMenu.js"></script>
+<script src="js/plugins/slimscroll/jquery.slimscroll.min.js"></script>
+<script src="js/public.js"></script>
+
+<!-- Custom and plugin javascript -->
+<script src="js/inspinia.js"></script>
+<script src="js/plugins/pace/pace.min.js"></script>
+<script src="js/plugins/toastr/toastr.min.js"></script>
+<script src="js/lodash.js"></script>
+
+<script src="js/plugins/slimscroll/jquery.slimscroll.min.js"></script>
+<script src="js/socket.io.js"></script>
+<script>
+    /**
+     * 创建与服务器连接 传入http地址
+     */
+    var user = $('#userVal').val();
+    var users = [];
+    var myuser = eval('(' + user + ')');
+    var socket = io.connect("http://172.230.130.178:3000/");
+    $("#chat-discussion").scrollTop($("#chat-discussion")[0].scrollHeight);
+    function doNothing(event){
+        var event = event || window.event;
+        event.preventDefault();
+        event.cancelBubble = true;
+        event.returnValue=false;
+        return false;
+    }
+    $(document).on('click','.chat-user',function(){
+        $(this).siblings('.chat-user').removeClass('chat-user-clicked');
+        $(this).addClass('chat-user-clicked');
+    })
+    $(document).on('mousedown','.chat-user',function(event) {               //右击鼠标显示快捷菜单：
+        $('#ownChat').show();
+        var event = event || window.event;
+        if (event.button == 2 && $(this).hasClass('chat-user-clicked')) {
+            /*判断点击是否为自己 是隐藏私聊按钮*/
+            if($(this).attr('data-userId')==myuser.id){
+                $('#ownChat').hide();
+            }
+            var newX = event.clientX + document.body.scrollLeft;
+            var newY = event.clientY + document.body.scrollTop;
+            $('#rightMenu')[0].style.display = "";
+            $('#rightMenu')[0].style.left = newX+'px';
+            $('#rightMenu')[0].style.top = newY+'px';
+            $('#rightMenu').addClass("animated fadeInRight")
+        }
+        else if (event.button == 0)
+        {
+            $('#rightMenu')[0].style.display = "none";
+
+        }
+    })
+    $(document).on('mousedown',function(event){
+        if (event.button == 0 && event.target!=$('#ownChat')[0]){
+            $('#rightMenu')[0].style.display = "none";
+        }
+    })
+    /**
+     * 私聊按钮点击事件
+     */
+    $('#rightMenu #ownChat').click(function(){
+        var selectUser = $('.chat-user-clicked');
+        var userId = selectUser.attr('data-userId');
+        var userName = selectUser.attr('data-nickName');
+        if(!$('.small-chat-box').hasClass('active'))$('.open-small-chat').click();
+        if($('#small-chat-heading #user-'+userId)[0]){
+            /**/
+        }else{
+            $('#small-chat-heading').append(
+                    ' <div id="user-'+userId+'" data-userId="'+userId+'" class="heading-user heading-user-clicked text-left pull-left">\
+                    '+userName+'\
+                <a class="heading-close text-right" href="javascript:void(0)" class="close-link" onclick="closeHeadingUser(this)">\
+                <i class="fa fa-times"></i>\
+                </a>\
+                </div>'
+            )
+            searchOwn(userId,myuser.id);
+            $('#user-'+userId).siblings().removeClass('heading-user-clicked');
+        }
+    })
+    /**
+     * 私聊选项卡切换 (查询用户私聊记录)
+     */
+    $(document).on('click','.heading-user',function(){
+        if(!$(this).hasClass("heading-user-clicked")){
+            $(this).addClass("heading-user-clicked").siblings().removeClass("heading-user-clicked");
+            searchOwn($(this).attr('data-userId'),myuser.id);
+        }else{
+            return false;
+        }
+    })
+
+    /**
+     * 弹出框设置
+    **/
+    toastr.options = {
+        "closeButton": true,
+        "debug": false,
+        "progressBar": true,
+        "preventDuplicates": true,
+        "positionClass": "toast-top-right",
+        "onclick": null,
+        "showDuration": "400",
+        "hideDuration": "1000",
+        "timeOut": "1000",
+        "extendedTimeOut": "1000",
+        "showEasing": "swing",
+        "hideEasing": "linear",
+        "showMethod": "fadeIn",
+        "hideMethod": "fadeOut"
+    }
+
+    socket.on('needUser', function () {
+        socket.emit('myUser', encodeURI(user));
+    });
+    socket.on('userList',function(userList){
+        addUserToList(userList)
+    })
+    socket.on('userJoin', function (user) {
+        var userObj = eval('(' + user + ')');
+        if(_.find(users,{'id':userObj.id})&&userObj.id==myuser.id){
+            return;
+        }else{
+            toastr.success(userObj.nickname+'加入了聊天室！');
+        }
+        users.push(userObj);
+    });
+    socket.on('userLeave', function (user,userList) {
+        var html = '';
+        userList.forEach(function (user) {
+            html += '<div class="chat-user">' +
+                    '<span class="pull-right label label-primary">在线</span>' +
+                    '<img class="chat-avatar" src="' + user.header_pic + '" alt="" >' +
+                    '<div class="chat-user-name">' +
+                    '<a href="#">' + user.nickname + '</a>' +
+                    '</div>' +
+                    '</div>';
+        });
+        $("#users-list").html(html)
+        toastr.error(user.nickname+'离开了聊天室！');
+    });
+    /**
+     * (群聊)点击发送按钮发送信息
+     */
+    $("#sendMsgBtn").click(function(){
+        var msg = $("#mesArea").val().trim();
+        var data = {from_user: myuser.id, nickname: myuser.nickname, content: msg, msg_type: 0,status:0};
+        if(msg!=""){
+            socket.emit('usermsg',msg, encodeURI(user))
+        }
+        $.ajax({
+            type:'POST',
+            url:'/chat/chatContent',
+            data:data,
+            success:function(data){
+                $("#chat-discussion").scrollTop($("#chat-discussion")[0].scrollHeight);
+            }
+        })
+        $("#mesArea").val("");
+    })
+    /**
+     * (私聊)点击发送按钮发送信息
+     */
+    $("#small-chat-send").click(function(){
+        var msg = $("#small-chat-sendInfo").val().trim();
+        var userId = $('.heading-user-clicked').attr('data-userId');
+        var data = {from_user: myuser.id,receive_user:userId, nickname: myuser.nickname, content: msg, msg_type: 1,status:0};
+        if(msg!=""){
+            socket.emit('ownChat',userId,msg, encodeURI(user))
+        }
+        $.ajax({
+            type:'POST',
+            url:'/chat/chatContent',
+            data:data,
+            success:function(data){
+                $("#small-chat-content").scrollTop($("#small-chat-content")[0].scrollHeight);
+            }
+        })
+        $("#small-chat-sendInfo").val("");
+    })
+    /**
+     * (群聊)接收服务器聊天发送信息
+     */
+    socket.on('chat', function (user,msg,time) {
+        var myDate= new Date(time.replace(/-/g,"/"));
+        var date = myDate.format("isoTime");
+        console.log(date)
+        if(user.id == myuser.id){
+            $("#chat-discussion").append('<div class="chat-message right clearfix">' +
+                    '                                        <img class="message-avatar" src="'+user.header_pic+'" alt="">' +
+                    '                                        <div class="message" style="display: inline-block;margin-right:0px;float:right;max-width:60%">' +
+                    '                                            <a class="message-author" href="#" style="margin-left:10px"> '+user.nickname+' </a>' +
+                    '											<span class="message-date text-left">'+date+'</span>' +
+                    '                                            <span class="message-content" style="padding-top:5px;">' +
+                    '											'+msg+'' +
+                    '                                            </span>' +
+                    '                                        </div>' +
+                    '                                    </div>');
+        }else{
+            $("#chat-discussion").append('<div class="chat-message left clearfix">' +
+                    '                                        <img class="message-avatar" src="'+user.header_pic+'" alt="">' +
+                    '                                        <div class="message" style="display: inline-block;margin-left:0px;float:left;max-width:60%">' +
+                    '                                            <a class="message-author" href="#" style="margin-right:10px"> '+user.nickname+' </a>' +
+                    '											<span class="message-date text-right">'+date+'</span>' +
+                    '                                            <span class="message-content" style="padding-top:5px;">' +
+                    '											'+msg+'' +
+                    '                                            </span>' +
+                    '                                        </div>' +
+                    '                                    </div>');
+        }
+        $("#chat-discussion").scrollTop($("#chat-discussion")[0].scrollHeight);
+    });
+
+    /**
+     * (私聊)接收服务器聊天发送信息
+     */
+    socket.on('ownChatSelf', function (user,msg,time) {
+        var myDate= new Date(time.replace(/-/g,"/"));
+        var date = myDate.format("HH:MM");
+            $("#small-chat-content").append('<div class="right">\
+                    <div class="author-name">\
+                    '+user.nickname+' <small class="chat-date">\
+                    '+date+'\
+            </small>\
+            </div>\
+            <div class="chat-message active">\
+                    '+msg+'\
+        </div>\
+            </div>')
+        setTimeout(function(){
+            $("#small-chat-content").scrollTop($("#small-chat-content")[0].scrollHeight);
+        },0)
+
+    });
+    /**
+     * 私聊接收 对方消息
+     * 发送者id,信息,时间
+     */
+    socket.on('to'+myuser.id, function (user,msg,time) {
+        var myDate= new Date(time.replace(/-/g,"/"));
+        var date = myDate.format("isoTime");
+        if(!$('#user-'+user.id)[0]){
+            addHeadingUser(user.id,user.nickname)
+        }
+        var sendUserId = $('.heading-user-clicked').attr('data-userId');
+        if($("#small-chat-content").children().length==0){
+            searchOwn(sendUserId,myuser.id)
+        }
+        /*私聊框头部标签 选中用户id == 发送者id*/
+        if(user.id == sendUserId){
+            $("#small-chat-content").append('<div class="left">\
+                            <div class="author-name">\
+                            '+user.nickname+' <small class="chat-date">\
+                            '+date+'\
+                    </small>\
+                    </div>\
+                    <div class="chat-message active">\
+                            '+msg+'\
+                </div>\
+                    </div>')
+            $("#small-chat-content").scrollTop($("#small-chat-content")[0].scrollHeight);
+        }
+    });
+
+    function addUserToList(userList) {
+        var html = '';
+        userList.forEach(function (user) {
+            html += '<div class="chat-user" data-userId="'+user.id+'" data-nickName="'+user.nickname+'">' +
+                    '<span class="pull-right label label-primary">在线</span>' +
+                    '<img class="chat-avatar" src="' + user.header_pic + '" alt="" >' +
+                    '<div class="chat-user-name">' +
+                    '<a href="#">' + user.nickname + '</a>' +
+                    '</div>' +
+                    '</div>';
+        });
+        $("#users-list").html(html);
+    }
+    function addHeadingUser(userId,userName){
+        $('#small-chat-heading').append(
+                ' <div id="user-'+userId+'" data-userId="'+userId+'" class="heading-user heading-user-clicked text-left pull-left">\
+                    '+userName+'\
+                <a class="heading-close text-right" href="javascript:void(0)" class="close-link" onclick="closeHeadingUser(this)">\
+                <i class="fa fa-times"></i>\
+                </a>\
+                </div>'
+        )
+        $('#user-'+userId).siblings().removeClass('heading-user-clicked');
+    }
+    /**
+     * 私聊内容查找
+     * @param 发送信息者ID
+     * @param 接收信息者ID
+     */
+    function searchOwn(sendId,receiveId){
+        $("#small-chat-content").html("");
+        $.ajax({
+            type:'POST',
+            url:'/chat/searchOwnContent',
+            data:{sendId:sendId,receiveId:receiveId},
+            success:function(data){
+                var html='';
+                $(data.chatContents).each(function(i){
+                    var desc= myuser.id==this.from_user?"right":"left";
+                    html+='<div class="'+desc+'">\
+                            <div class="author-name">\
+                            '+this.nickname+' <small class="chat-date">\
+                            '+this.create_time+'\
+                    </small>\
+                    </div>\
+                    <div class="chat-message active">\
+                            '+this.content+'\
+                </div>\
+                    </div>';
+                })
+                $("#small-chat-content").append(html)
+                $("#small-chat-content").scrollTop($("#small-chat-content")[0].scrollHeight);
+            }
+        })
+    }
+
+</script>
+</body>
+
+</html>
